@@ -1,0 +1,9 @@
+namespace DeepClone.SourceGenerator.ExtensionMethods;
+
+using Microsoft.CodeAnalysis;
+
+internal static class IncrementalValuesProviderExtensions
+{
+    public static IncrementalValuesProvider<TSource> WhereNotNull<TSource>(
+        this IncrementalValuesProvider<TSource?> source) => source.Where(x => x is not null).Select((x, _) => x!);
+}

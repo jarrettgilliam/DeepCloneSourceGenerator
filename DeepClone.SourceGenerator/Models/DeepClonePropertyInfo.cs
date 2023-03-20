@@ -1,9 +1,7 @@
 namespace DeepClone.SourceGenerator.Models;
 
 internal record DeepClonePropertyInfo(
-    string PropertyName,
-    bool IsValueTypeOrImmutable)
+    string PropertyName)
 {
     public string PropertyName { get; } = PropertyName;
-    public bool IsValueTypeOrImmutable { get; } = IsValueTypeOrImmutable;
 }

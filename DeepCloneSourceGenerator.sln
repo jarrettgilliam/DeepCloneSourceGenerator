@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepClone.SourceGenerator",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepClone.SourceGenerator.Tests", "DeepClone.SourceGenerator.Tests\DeepClone.SourceGenerator.Tests.csproj", "{C8719F78-DF3F-4252-9DDB-F73001C14B53}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepClone.SourceGenerator.IntegrationTests", "DeepClone.SourceGenerator.IntegrationTests\DeepClone.SourceGenerator.IntegrationTests.csproj", "{14347C3B-6FA5-48E5-88EE-6F1A67ECA650}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{C8719F78-DF3F-4252-9DDB-F73001C14B53}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C8719F78-DF3F-4252-9DDB-F73001C14B53}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C8719F78-DF3F-4252-9DDB-F73001C14B53}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14347C3B-6FA5-48E5-88EE-6F1A67ECA650}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14347C3B-6FA5-48E5-88EE-6F1A67ECA650}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14347C3B-6FA5-48E5-88EE-6F1A67ECA650}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14347C3B-6FA5-48E5-88EE-6F1A67ECA650}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
