@@ -25,4 +25,11 @@
       <ProjectReference Include="..\DeepClone.SourceGenerator\DeepClone.SourceGenerator.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Compile Remove="GeneratedCodeSnapshots\*.cs" />
+        <Content Include="GeneratedCodeSnapshots\*.cs">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
 </Project>

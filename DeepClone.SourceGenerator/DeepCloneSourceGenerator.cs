@@ -41,7 +41,9 @@ internal class DeepCloneSourceGenerator : IIncrementalGenerator
         syntaxNode is TypeDeclarationSyntax typeSyntax &&
         typeSyntax.Modifiers.Any(SyntaxKind.PartialKeyword) &&
         !typeSyntax.Modifiers.Any(SyntaxKind.StaticKeyword) &&
-        typeSyntax.AttributeLists.ContainsAttribute(this.SourceCode.DeepCloneableAttributeShortName);
+        typeSyntax.AttributeLists.ContainsAttribute(
+            this.SourceCode.DeepCloneableAttributeShortName,
+            this.SourceCode.BaseNamespace);
 
     private DeepCloneTypeInfo? GetDeepCloneTypeInfo(
         GeneratorSyntaxContext context,

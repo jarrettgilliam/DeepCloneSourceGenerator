@@ -8,17 +8,21 @@ internal static class AttributeListsExtensions
 {
     public static bool ContainsAttribute(
         this SyntaxList<AttributeListSyntax> attributeLists,
-        string attributeShortName) =>
+        string attributeShortName,
+        string attributeNamespace) =>
         attributeLists.Any(
             x => x.Attributes.Any(
-                y => AttributeNameMatches(y, attributeShortName)));
+                y => AttributeNameMatches(y, attributeShortName, attributeNamespace)));
 
-    private static bool AttributeNameMatches(AttributeSyntax attributeSyntax, string attributeShortName)
+    private static bool AttributeNameMatches(
+        AttributeSyntax attributeSyntax,
+        string attributeShortName,
+        string attributeNamespace)
     {
         string? identifierText = attributeSyntax.Name switch
         {
-            IdentifierNameSyntax identifierNameSyntax => identifierNameSyntax.Identifier.Text,
-            QualifiedNameSyntax qualifiedNameSyntax => qualifiedNameSyntax.Right.Identifier.Text,
+            IdentifierNameSyntax i => i.Identifier.Text,
+            QualifiedNameSyntax q when q.Left.ToString().Equals(attributeNamespace) => q.Right.Identifier.Text,
             _ => null
         };
 
