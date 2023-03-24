@@ -43,12 +43,9 @@ public class DeepCloneSourceGeneratorTests
 
         string expectedHintName = "MyCloneableClass.g.cs";
 
-        var result = RunGenerator<DeepCloneSourceGenerator>(userCode);
+        var result = TestHelper.RunGenerator<DeepCloneSourceGenerator>(userCode);
 
-        GeneratedSourceResult? actual = result.Results.Single().GeneratedSources
-            .FirstOrDefault(r => r.HintName == expectedHintName);
-
-        Assert.Equal(expectedHintName, actual.Value.HintName);
+        result.AssertGeneratedSourceExists(expectedHintName);
     }
 
     [Theory]
@@ -68,32 +65,29 @@ public class DeepCloneSourceGeneratorTests
 
         string expectedHintName = "MyCloneableClass.g.cs";
 
-        var result = RunGenerator<DeepCloneSourceGenerator>(userCode);
+        var result = TestHelper. RunGenerator<DeepCloneSourceGenerator>(userCode);
 
-        GeneratedSourceResult? actual = result.Results.Single().GeneratedSources
-            .FirstOrDefault(r => r.HintName == expectedHintName);
-
-        Assert.NotEqual(expectedHintName, actual.Value.HintName);
+        result.AssertGeneratedSourceDoesntExist(expectedHintName);
     }
 
-    private static GeneratorDriverRunResult RunGenerator<T>(string userCode)
-        where T : IIncrementalGenerator, new()
+    [Fact]
+    public void Generated_Source_Matches_Snapshot()
     {
-        var compilation = CSharpCompilation.Create("InMemoryUnitTestProject",
-            new[] { CSharpSyntaxTree.ParseText(userCode) },
-            Basic.Reference.Assemblies.Net70.References.All,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        string userCode = """
+            namespace DeepClone.SourceGenerator.UnitTests;
+            [DeepCloneable]
+            public partial class MyCloneableClass
+            {
+                public int MyInt { get; set; }
+                public string MyString { get; set; }
+                public MyCloneableClass MyCloneableClass { get; set; }
+            }
+            """;
 
-        IIncrementalGenerator generator = new T();
-        ISourceGenerator sourceGenerator = generator.AsSourceGenerator();
+        string expectedHintName = "MyCloneableClass.g.cs";
 
-        // trackIncrementalGeneratorSteps allows to report info about each step of the generator
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(
-            generators: new ISourceGenerator[] { sourceGenerator },
-            driverOptions: new GeneratorDriverOptions(default, trackIncrementalGeneratorSteps: true));
+        var result = TestHelper. RunGenerator<DeepCloneSourceGenerator>(userCode);
 
-        driver = driver.RunGenerators(compilation);
-
-        return driver.GetRunResult();
+        result.AssertGeneratedSourceMatchesSnapshot(expectedHintName);
     }
 }

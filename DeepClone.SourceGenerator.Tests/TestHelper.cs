@@ -63,6 +63,20 @@ internal static class TestHelper
         Assert.Equal(expectedGeneratedCode, generatedSourceResult.SourceText.ToString());
     }
 
+    public static void AssertGeneratedSourceDoesntExist(this GeneratorDriverRunResult result, string expectedHintName)
+    {
+        ImmutableArray<GeneratedSourceResult> generatedSources = result.Results.Single().GeneratedSources;
+
+        Assert.DoesNotContain(expectedHintName, generatedSources.Select(x => x.HintName));
+    }
+
+    public static void AssertGeneratedSourceExists(this GeneratorDriverRunResult result, string expectedHintName)
+    {
+        ImmutableArray<GeneratedSourceResult> generatedSources = result.Results.Single().GeneratedSources;
+
+        Assert.Contains(expectedHintName, generatedSources.Select(x => x.HintName));
+    }
+
     private static string GetGeneratedCodeSnapshot(string snapshotName) =>
         File.ReadAllText($"GeneratedCodeSnapshots/{snapshotName}").Replace("\r\n", "\n");
 }
