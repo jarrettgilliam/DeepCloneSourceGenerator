@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using DeepClone.SourceGenerator.ExtensionMethods;
@@ -19,15 +20,20 @@ internal class DeepCloneSourceGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        // TODO: Output roslyn error messages for types with the DeepCloneable attribute that are not partial
+
         context.RegisterPostInitializationOutput(this.GenerateDeepCloneableAttribute);
 
         IncrementalValuesProvider<DeepCloneTypeInfo> deepCloneTypesProvider =
             context.SyntaxProvider.CreateSyntaxProvider(
                     this.IsDeepCloneableType,
                     this.GetTypeInfo)
-                .WhereNotNull();
-
-        // TODO: Recursively loop over property types to find more types to add a DeepClone() function to
+                .WhereNotNull()
+                .WithComparer(SymbolEqualityComparer.Default)
+                .Collect()
+                .SelectMany(this.FindReferencedPartialTypes)
+                .Select(this.ToDeepCloneTypeInfo)
+                .WithComparer(EqualityComparer<DeepCloneTypeInfo>.Default);
 
         context.RegisterSourceOutput(deepCloneTypesProvider, this.GenerateDeepClone);
     }
@@ -39,41 +45,111 @@ internal class DeepCloneSourceGenerator : IIncrementalGenerator
             this.SourceCode.DeepCloneableAttributeDefinition);
     }
 
-    private bool IsDeepCloneableType(SyntaxNode syntaxNode, CancellationToken cancellationToken) =>
-        syntaxNode is TypeDeclarationSyntax typeSyntax &&
-        typeSyntax.Modifiers.Any(SyntaxKind.PartialKeyword) &&
-        !typeSyntax.Modifiers.Any(SyntaxKind.StaticKeyword) &&
-        typeSyntax.AttributeLists.ContainsAttribute(
-            this.SourceCode.DeepCloneableAttributeShortName,
-            this.SourceCode.BaseNamespace);
+    private bool IsDeepCloneableType(SyntaxNode syntaxNode, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
 
-    private DeepCloneTypeInfo? GetTypeInfo(
+        return syntaxNode is TypeDeclarationSyntax typeSyntax &&
+               typeSyntax.Modifiers.Any(SyntaxKind.PartialKeyword) &&
+               !typeSyntax.Modifiers.Any(SyntaxKind.StaticKeyword) &&
+               typeSyntax.AttributeLists.ContainsAttribute(
+                   this.SourceCode.DeepCloneableAttributeShortName,
+                   this.SourceCode.BaseNamespace,
+                   cancellationToken);
+    }
+
+    private INamedTypeSymbol? GetTypeInfo(
         GeneratorSyntaxContext context,
         CancellationToken cancellationToken)
     {
-        if (context.Node is not ClassDeclarationSyntax candidate ||
-            context.SemanticModel.GetDeclaredSymbol(candidate, cancellationToken) is not { } symbol)
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (context.Node is TypeDeclarationSyntax typeSyntax &&
+            context.SemanticModel.GetDeclaredSymbol(typeSyntax, cancellationToken) is { } typeSymbol)
         {
-            return null;
+            return typeSymbol;
         }
 
+        return null;
+    }
+
+    private IEnumerable<INamedTypeSymbol> FindReferencedPartialTypes(
+        ImmutableArray<INamedTypeSymbol> typeSymbols, CancellationToken cancellationToken)
+    {
+        HashSet<INamedTypeSymbol> referencedPartialTypes = new(SymbolEqualityComparer.Default);
+
+        foreach (INamedTypeSymbol typeSymbol in typeSymbols)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            this.FindPartialTypesReferencedByProperties(typeSymbol, referencedPartialTypes, cancellationToken);
+        }
+
+        return referencedPartialTypes;
+    }
+
+    private void FindPartialTypesReferencedByProperties(
+        INamedTypeSymbol typeSymbol,
+        ISet<INamedTypeSymbol> namedTypeSymbols,
+        CancellationToken cancellationToken)
+    {
         // TODO: Do more filter checking
+        if (!this.IsPartialType(typeSymbol) ||
+            !namedTypeSymbols.Add(typeSymbol))
+        {
+            return;
+        }
+
+        foreach (IPropertySymbol propertySymbol in typeSymbol.GetMembers().OfType<IPropertySymbol>())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (propertySymbol.Type is INamedTypeSymbol namedTypeSymbol)
+            {
+                this.FindPartialTypesReferencedByProperties(namedTypeSymbol, namedTypeSymbols, cancellationToken);
+            }
+        }
+    }
+
+    private bool IsPartialType(INamedTypeSymbol? typeSymbol)
+    {
+        if (typeSymbol is null)
+        {
+            return false;
+        }
+
+        return typeSymbol.DeclaringSyntaxReferences
+            .Select(reference => reference.GetSyntax())
+            .OfType<TypeDeclarationSyntax>()
+            .Any(typeDeclaration => typeDeclaration.Modifiers.Any(SyntaxKind.PartialKeyword));
+    }
+
+    private DeepCloneTypeInfo ToDeepCloneTypeInfo(INamedTypeSymbol symbol, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
 
         return new DeepCloneTypeInfo(
             symbol.ContainingNamespace.ToDisplayString(),
             symbol.Name,
-            this.GetPropertyInfos(symbol));
+            this.GetPropertyInfos(symbol, cancellationToken));
     }
 
     private IEnumerable<DeepClonePropertyInfo> GetPropertyInfos(
-        INamedTypeSymbol symbol) =>
-        symbol.GetMembers()
+        INamedTypeSymbol symbol, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // TODO: capture access modifiers
+        return symbol.GetMembers()
             .OfType<IPropertySymbol>()
-            .Select(property => new DeepClonePropertyInfo(property.Name));
+            // TODO: Filter static/read-only properties
+            .Select(property =>
+                new DeepClonePropertyInfo(
+                    property.Name,
+                    this.IsPartialType(property.Type as INamedTypeSymbol)));
+    }
 
     private void GenerateDeepClone(SourceProductionContext context, DeepCloneTypeInfo typeInfo)
     {
-        // TODO: Implement `DeepClone()` method
         context.AddSource($"{typeInfo.ClassName}.g.cs",
             $$"""
             // <auto-generated/>
@@ -83,7 +159,7 @@ internal class DeepCloneSourceGenerator : IIncrementalGenerator
             {
                 {{this.SourceCode.GeneratedCodeAttributeUsage}}
                 public {{typeInfo.ClassName}} DeepClone() =>
-                    new {{typeInfo.ClassName}}
+                    new()
                     {
                         {{this.GeneratePropertyInitializers(typeInfo.Properties)}}
                     };
@@ -95,9 +171,14 @@ internal class DeepCloneSourceGenerator : IIncrementalGenerator
         IEnumerable<DeepClonePropertyInfo> deepClonePropertyInfos)
     {
         string propertyInitializers = string.Join(
-           $"{Environment.NewLine}            ",
+            $",{Environment.NewLine}            ",
             deepClonePropertyInfos.Select(
-                property => $"{property.PropertyName} = this.{property.PropertyName},"));
+                property =>
+                {
+                    string? deepCloneInvoke = property.IsPartialClass ? "?.DeepClone()" : null;
+
+                    return $"{property.PropertyName} = this.{property.PropertyName}{deepCloneInvoke}";
+                }));
 
         return propertyInitializers;
     }

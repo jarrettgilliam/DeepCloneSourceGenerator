@@ -1,11 +1,9 @@
 namespace DeepCloneSourceGenerator.Tests;
 
 using System;
-using System.Linq;
 using System.Reflection;
 using DeepClone.SourceGenerator;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
 public class DeepCloneSourceGeneratorTests
@@ -33,7 +31,7 @@ public class DeepCloneSourceGeneratorTests
     [InlineData("DeepCloneableAttribute")]
     [InlineData("DeepClone.SourceGenerator.DeepCloneable")]
     [InlineData("DeepClone.SourceGenerator.DeepCloneableAttribute")]
-    public void Generator_Creates_Source_For_Type(string attributeName)
+    public void Generator_Creates_Source_For_Real_Attribute(string attributeName)
     {
         string userCode = $$"""
             namespace DeepClone.SourceGenerator.UnitTests;
@@ -41,11 +39,8 @@ public class DeepCloneSourceGeneratorTests
             public partial class MyCloneableClass { }
             """;
 
-        string expectedHintName = "MyCloneableClass.g.cs";
-
-        var result = TestHelper.RunGenerator<DeepCloneSourceGenerator>(userCode);
-
-        result.AssertGeneratedSourceExists(expectedHintName);
+        TestHelper.RunGenerator<DeepCloneSourceGenerator>(userCode)
+            .AssertGeneratedSourceExists("MyCloneableClass.g.cs");
     }
 
     [Theory]
@@ -55,7 +50,7 @@ public class DeepCloneSourceGeneratorTests
     [InlineData("System.ComponentModel.DescriptionAttribute")]
     [InlineData("Fake.Namespace.DeepCloneable")]
     [InlineData("Fake.Namespace.DeepCloneableAttribute")]
-    public void Generator_Doesnt_Create_Source_For_Type(string attributeName)
+    public void Generator_Doesnt_Create_Source_For_Other_Attribute(string attributeName)
     {
         string userCode = $$"""
             namespace DeepClone.SourceGenerator.UnitTests;
@@ -63,31 +58,73 @@ public class DeepCloneSourceGeneratorTests
             public partial class MyCloneableClass { }
             """;
 
-        string expectedHintName = "MyCloneableClass.g.cs";
-
-        var result = TestHelper. RunGenerator<DeepCloneSourceGenerator>(userCode);
-
-        result.AssertGeneratedSourceDoesntExist(expectedHintName);
+        TestHelper.RunGenerator<DeepCloneSourceGenerator>(userCode)
+            .AssertGeneratedSourceDoesntExist("MyCloneableClass.g.cs");
     }
 
     [Fact]
-    public void Generated_Source_Matches_Snapshot()
+    public void Recursive_Type_Matches_Snapshot()
+    {
+        string userCode = """
+            namespace DeepClone.SourceGenerator.UnitTests;
+            [DeepCloneable]
+            public partial class MyRecursiveClass
+            {
+                public int MyInt { get; set; }
+                public string MyString { get; set; }
+                public MyRecursiveClass MyRecursiveClass { get; set; }
+            }
+            """;
+
+        TestHelper.RunGenerator<DeepCloneSourceGenerator>(userCode)
+            .AssertGeneratedSourceMatchesSnapshot("MyRecursiveClass.g.cs");
+    }
+
+    [Theory]
+    [InlineData("MyRootClass.g.cs")]
+    [InlineData("MyNestedClass.g.cs")]
+    public void Nested_Type_Matches_Snapshot(string expectedHintName)
+    {
+        string userCode = """
+            namespace DeepClone.SourceGenerator.UnitTests;
+            [DeepCloneable]
+            public partial class MyRootClass
+            {
+                public int Int { get; set; }
+                public string String { get; set; }
+                public MyNestedClass NestedClass { get; set; }
+            }
+
+            public partial class MyNestedClass
+            {
+                public int NestedInt { get; set; }
+                public string NestedString { get; set; }
+            }
+            """;
+
+        var result = TestHelper.RunGenerator<DeepCloneSourceGenerator>(userCode);
+
+        result.AssertGeneratedSourceMatchesSnapshot(expectedHintName);
+    }
+
+    [Theory]
+    [InlineData("Char.g.cs")]
+    [InlineData("Int32.g.cs")]
+    [InlineData("String.g.cs")]
+    public void Doesnt_Generate_Source_For_Primitives(string primitiveHintName)
     {
         string userCode = """
             namespace DeepClone.SourceGenerator.UnitTests;
             [DeepCloneable]
             public partial class MyCloneableClass
             {
+                public char MyChar { get; set; }
                 public int MyInt { get; set; }
                 public string MyString { get; set; }
-                public MyCloneableClass MyCloneableClass { get; set; }
             }
             """;
 
-        string expectedHintName = "MyCloneableClass.g.cs";
-
-        var result = TestHelper. RunGenerator<DeepCloneSourceGenerator>(userCode);
-
-        result.AssertGeneratedSourceMatchesSnapshot(expectedHintName);
+        TestHelper.RunGenerator<DeepCloneSourceGenerator>(userCode)
+            .AssertGeneratedSourceDoesntExist(primitiveHintName);
     }
 }

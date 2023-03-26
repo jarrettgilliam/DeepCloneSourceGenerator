@@ -1,8 +1,11 @@
-﻿namespace DeepClone.SourceGenerator.Example;
+﻿namespace DeepClone.SourceGenerator.Examples;
+
+using System;
+using DeepClone.SourceGenerator.Example;
 
 [DeepCloneable]
-public partial class Person
+public sealed partial class Person : ICloneable
 {
-    public string? FirstName { get; set; }
-    public string? LastName { get; set; }
+    public Name? Name { get; set; }
+    public object Clone() => this.DeepClone();
 }

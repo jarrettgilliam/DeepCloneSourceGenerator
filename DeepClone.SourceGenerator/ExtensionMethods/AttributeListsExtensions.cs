@@ -3,16 +3,21 @@ namespace DeepClone.SourceGenerator.ExtensionMethods;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
+using System.Threading;
 
 internal static class AttributeListsExtensions
 {
     public static bool ContainsAttribute(
         this SyntaxList<AttributeListSyntax> attributeLists,
         string attributeShortName,
-        string attributeNamespace) =>
-        attributeLists.Any(
+        string attributeNamespace, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return attributeLists.Any(
             x => x.Attributes.Any(
                 y => AttributeNameMatches(y, attributeShortName, attributeNamespace)));
+    }
 
     private static bool AttributeNameMatches(
         AttributeSyntax attributeSyntax,

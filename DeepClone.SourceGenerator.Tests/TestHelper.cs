@@ -50,7 +50,8 @@ internal static class TestHelper
         return compilation;
     }
 
-    public static void AssertGeneratedSourceMatchesSnapshot(this GeneratorDriverRunResult result, string expectedHintName)
+    public static void AssertGeneratedSourceMatchesSnapshot(
+        this GeneratorDriverRunResult result, string expectedHintName)
     {
         string expectedGeneratedCode = GetGeneratedCodeSnapshot(expectedHintName);
 
@@ -60,7 +61,10 @@ internal static class TestHelper
 
         var generatedSourceResult = generatedSources.First(x => x.HintName == expectedHintName);
 
-        Assert.Equal(expectedGeneratedCode, generatedSourceResult.SourceText.ToString());
+        Assert.Equal(
+            expectedGeneratedCode,
+            generatedSourceResult.SourceText.ToString(),
+            ignoreLineEndingDifferences: true);
     }
 
     public static void AssertGeneratedSourceDoesntExist(this GeneratorDriverRunResult result, string expectedHintName)
@@ -78,5 +82,5 @@ internal static class TestHelper
     }
 
     private static string GetGeneratedCodeSnapshot(string snapshotName) =>
-        File.ReadAllText($"GeneratedCodeSnapshots/{snapshotName}").Replace("\r\n", "\n");
+        File.ReadAllText($"GeneratedCodeSnapshots/{snapshotName}");
 }
