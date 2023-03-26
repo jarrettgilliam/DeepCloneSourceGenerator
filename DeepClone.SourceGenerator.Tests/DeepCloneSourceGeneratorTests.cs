@@ -111,7 +111,7 @@ public class DeepCloneSourceGeneratorTests
     [InlineData("Char.g.cs")]
     [InlineData("Int32.g.cs")]
     [InlineData("String.g.cs")]
-    public void Doesnt_Generate_Source_For_Primitives(string primitiveHintName)
+    public void Generator_Doesnt_Generate_Source_For_Primitives(string primitiveHintName)
     {
         string userCode = """
             namespace DeepClone.SourceGenerator.UnitTests;
@@ -126,5 +126,18 @@ public class DeepCloneSourceGeneratorTests
 
         TestHelper.RunGenerator<DeepCloneSourceGenerator>(userCode)
             .AssertGeneratedSourceDoesntExist(primitiveHintName);
+    }
+
+    [Fact]
+    public void Generator_Matches_Type_Access_Modifier()
+    {
+        string userCode = """
+            namespace DeepClone.SourceGenerator.UnitTests;
+            [DeepCloneable]
+            internal partial class MyInternalClass { }
+            """;
+
+        TestHelper.RunGenerator<DeepCloneSourceGenerator>(userCode)
+            .AssertGeneratedSourceMatchesSnapshot("MyInternalClass.g.cs");
     }
 }

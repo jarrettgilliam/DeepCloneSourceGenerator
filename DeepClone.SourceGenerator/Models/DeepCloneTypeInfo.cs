@@ -1,13 +1,16 @@
 namespace DeepClone.SourceGenerator.Models;
 
 using System.Collections.Generic;
+using Microsoft.CodeAnalysis;
 
 internal record DeepCloneTypeInfo(
-    string ClassNamespace,
-    string ClassName,
+    string Namespace,
+    string Name,
+    Accessibility AccessModifier,
     IEnumerable<DeepClonePropertyInfo> Properties)
 {
-    public string ClassNamespace { get; } = ClassNamespace;
-    public string ClassName { get; } = ClassName;
+    public string Namespace { get; } = Namespace;
+    public string Name { get; } = Name;
+    public Accessibility AccessModifier { get; } = AccessModifier;
     public IEnumerable<DeepClonePropertyInfo> Properties { get; } = Properties;
 }
